@@ -39,7 +39,9 @@ parking_lot = { workspace = true }
 sha2 = { workspace = true }
 
 opentelemetry = { workspace = true}
-opentelemetry-jaeger = { workspace = true, features = ["collector_client", "isahc_collector_client", "rt-tokio"] }
+opentelemetry-otlp = { workspace = true, features = ["trace"] }
+opentelemetry_sdk = { workspace = true, features = ["rt-tokio"] }
+# opentelemetry-jaeger = { workspace = true, features = ["collector_client", "isahc_collector_client", "rt-tokio"] }
 tracing-opentelemetry = {workspace = true}
 
 tokio = { workspace = true}

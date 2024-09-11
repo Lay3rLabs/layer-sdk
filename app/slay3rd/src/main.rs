@@ -14,6 +14,10 @@ use tracing_subscriber::fmt::time::LocalTime;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::FmtSubscriber;
 
+use opentelemetry::{trace::TracerProvider, KeyValue};
+use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_sdk::{trace::Config, Resource};
+
 use layer_abci::ServerConfig;
 use layer_app::AppConfig;
 
@@ -71,19 +75,25 @@ async fn main() {
     let data = config.extract_data();
 
     // add open telemetry
-    if let Some(collector) = config.jaeger.as_ref() {
-        let endpoint = format!("{}/api/traces", collector);
-        opentelemetry::global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
-        let tracer = opentelemetry_jaeger::new_collector_pipeline()
+    if let Some(endpoint) = config.jaeger.as_ref() {
+        let otlp_exporter = opentelemetry_otlp::new_exporter()
+            .tonic()
             .with_endpoint(endpoint)
-            //         // optionally set username and password as well.
-            //         // .with_username("username")
-            //         // .with_password("s3cr3t")
-            .with_service_name("slay3rd")
-            .with_isahc()
-            .with_timeout(std::time::Duration::from_secs(2))
-            .install_batch(opentelemetry::runtime::Tokio)
+            .with_timeout(std::time::Duration::from_secs(2));
+        let trace_cfg = Config::default().with_resource(Resource::new(vec![KeyValue::new(
+            "service.name",
+            "layer-sdk",
+        )]));
+
+        let provider = opentelemetry_otlp::new_pipeline()
+            .tracing()
+            .with_exporter(otlp_exporter)
+            .with_trace_config(trace_cfg)
+            .install_batch(opentelemetry_sdk::runtime::Tokio)
+            // .install_simple()
             .unwrap();
+        let tracer = provider.tracer("layer-sdk");
+
         let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
         let subscriber = tracing_subscriber::Registry::default()
             .with(config.filter)

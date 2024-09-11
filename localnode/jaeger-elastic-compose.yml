@@ -43,10 +43,12 @@ services:
       - "14267"
       - "14250"
       - "9411"
+      - "4317"
     ports: !reset []
     restart: on-failure
     environment:
       - SPAN_STORAGE_TYPE=elasticsearch
+      - COLLECTOR_OTLP_ENABLED=true
     command: [
       "--es.server-urls=http://elasticsearch:9200",
       "--es.num-shards=1",
