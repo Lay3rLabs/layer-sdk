@@ -516,8 +516,11 @@ mod tests {
     // run finalize_block
     // query account + balances for update
     fn transaction_workflow<T: PersistentStorage + 'static>(storage: T) {
-        let sender = must_id("slay3r1pkptre7fdkl6gfrzlesjjvhxhlc3r4gmvk3r3j");
-        let recipient = must_id("slay3r1y5hl7x8hxl72dc9gu920eaz6l7vhl0luu6s70h");
+        // TODO: convert bech32 to 0x checksummed (make script)
+        let sender = must_id("0x0d82b1E7c96dbfA42462fE612932e6bfF111D51B");
+        let recipient = must_id("0x252fFf18f737fcA6E0A8E154FCf45aFf997fBFFc");
+        // let sender = must_id("slay3r1pkptre7fdkl6gfrzlesjjvhxhlc3r4gmvk3r3j");
+        // let recipient = must_id("slay3r1y5hl7x8hxl72dc9gu920eaz6l7vhl0luu6s70h");
         let denom: &str = "uslay";
 
         let expected_gas = 16_000u64;
@@ -577,7 +580,7 @@ mod tests {
                 recipient: recipient.clone(),
                 amount: coins(2_000_000, denom),
             })],
-            signer: must_id("slay3r1pkptre7fdkl6gfrzlesjjvhxhlc3r4gmvk3r3j"),
+            signer: must_id("0x0d82b1E7c96dbfA42462fE612932e6bfF111D51B"),
             signing_info: SigningInfo {
                 message_hash: Binary::from(
                     hex!("6d368a4b8436e0b19a2d06069e0b70086ba7c40e91a9d04d31946c10346d79a9")

@@ -33,6 +33,10 @@ COPY packages/std/Cargo.toml /myapp/packages/std/Cargo.toml
 COPY dummy.rs /myapp/packages/std/src/lib.rs
 COPY packages/storage/Cargo.toml /myapp/packages/storage/Cargo.toml
 COPY dummy.rs /myapp/packages/storage/src/lib.rs
+COPY tools/proto-compiler/Cargo.toml /myapp/tools/proto-compiler/Cargo.toml
+COPY dummy.rs /myapp/tools/proto-compiler/src/lib.rs
+COPY tools/address-converter/Cargo.toml /myapp/tools/address-converter/Cargo.toml
+COPY dummy.rs /myapp/tools/address-converter/src/lib.rs
 RUN cargo build --release --bin slay3rd
 
 # clean up these fake local deps so we compile for real later

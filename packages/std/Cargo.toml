@@ -21,6 +21,6 @@ ripemd = { workspace = true }
 tracing = { workspace = true }
 bytes = { workspace = true }
 hex = { workspace = true }
-bech32 = { version = "0.9.1", default-features = false }
 chrono = { version = "0.4.19", default-features = false, features = ["std"] }
 derivative = "2.2.0"
+alloy-primitives = { workspace = true }

@@ -10,7 +10,7 @@ mod time;
 mod tx;
 mod utils;
 
-pub use account_id::{must_id, AccountId, AccountIdError, DEFAULT_BECH32_PREFIX};
+pub use account_id::{must_id, AccountId, AccountIdError, VALID_ADDR_LENGTH};
 use cosmwasm_std::Binary;
 pub use encode::{CoinEncode, HexEncode};
 pub use gas::{GasError, GasMeter, GasResult};

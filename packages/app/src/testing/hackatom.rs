@@ -310,7 +310,9 @@ fn error_handling_from_api_call() {
     match err {
         PulsarError::Wasm(WasmError::Contract(msg)) => {
             assert!(
-                msg.starts_with("Generic error: addr_validate errored: Bech32:"),
+                msg.starts_with(
+                    "Generic error: addr_validate errored: Address: invalid string length"
+                ),
                 "Unexpected error message: {}",
                 msg
             );

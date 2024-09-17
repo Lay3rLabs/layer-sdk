@@ -1,5 +1,5 @@
 [workspace]
-members = ["app/*", "contracts/*", "packages/*"]
+members = ["app/*", "contracts/*", "packages/*", "tools/address-converter"]
 exclude = ["tools/proto-compiler"]
 resolver = "2"
 
@@ -71,6 +71,8 @@ cosmrs = { version = "0.13.0", default-features = false, features = ["cosmwasm"]
 cosmos-sdk-proto = { version = "0.18.0", default-features = false, features = ["cosmwasm"] }
 cw-orch-core = { version = "1"}
 abstract-cw-multi-test = { version = "1", default-features = false }
+
+alloy-primitives = { version = "0.8.2", default-features = false }
 
 [profile.release]
 # temporary to speed up testing

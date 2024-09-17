@@ -479,7 +479,7 @@ mod tests {
         assert_eq!(res.messages.len(), 0);
         assert_eq!(res.events.len(), 0);
         assert_eq!(res.attributes.len(), 0);
-        assert_eq!(gas_used, 57);
+        assert_eq!(gas_used, 56);
 
         // query the state was written - token_info and total supply
         let num = writer
@@ -677,7 +677,7 @@ mod tests {
         let cw20::AllAccountsResponse { accounts } = from_json(res).unwrap();
         assert_eq!(
             accounts,
-            vec![two.to_string(), one.to_string(), three.to_string()]
+            vec![one.to_string(), two.to_string(), three.to_string()]
         );
     }
 

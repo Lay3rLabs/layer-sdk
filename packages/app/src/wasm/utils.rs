@@ -4,7 +4,7 @@ use sha2::{
 };
 use thiserror::Error;
 
-use layer_std::AccountId;
+use layer_std::{AccountId, VALID_ADDR_LENGTH};
 
 use crate::PulsarError;
 
@@ -23,7 +23,7 @@ pub fn build_instantiate_address(
     prehash.extend(code_id.to_be_bytes());
     prehash.extend(counter.to_be_bytes());
     let raw = Sha256::digest(prehash);
-    Ok(AccountId::new(&raw)?)
+    Ok(AccountId::new(&raw[..VALID_ADDR_LENGTH])?)
 }
 
 /// We should match the reference wasmd/Go implementation for compatibility with cosmos-sdk:
@@ -58,7 +58,7 @@ pub fn build_instantiate_2_address(
     key.extend_from_slice(&(msg.len() as u64).to_be_bytes());
     key.extend_from_slice(msg);
     let address_data = hash("module", &key);
-    Ok(AccountId::new(&address_data)?)
+    Ok(AccountId::new(&address_data[..VALID_ADDR_LENGTH])?)
 }
 
 /// This must be compatible with the wasmd calls, and thus map to address.Module in Cosmos SDK.
@@ -108,41 +108,31 @@ mod tests {
         let msg2: &[u8] = b"{}";
         let msg3: &[u8] = b"{\"some\":123,\"structure\":{\"nested\":[\"ok\",true]}}";
 
+        // TODO: reduce all expected to 40 chars, not 64 chars
+
         // No msg
-        let expected = AccountId::new(&hex!(
-            "5e865d3e45ad3e961f77fd77d46543417ced44d924dc3e079b5415ff6775f847"
-        ))
-        .unwrap();
+        let expected = AccountId::new(&hex!("5e865d3e45ad3e961f77fd77d46543417ced44d9")).unwrap();
         assert_eq!(
             build_instantiate_2_address(&checksum1, &creator1, &salt1, msg1).unwrap(),
             expected
         );
 
         // With msg
-        let expected = AccountId::new(&hex!(
-            "0995499608947a5281e2c7ebd71bdb26a1ad981946dad57f6c4d3ee35de77835"
-        ))
-        .unwrap();
+        let expected = AccountId::new(&hex!("0995499608947a5281e2c7ebd71bdb26a1ad9819")).unwrap();
         assert_eq!(
             build_instantiate_2_address(&checksum1, &creator1, &salt1, msg2).unwrap(),
             expected
         );
 
         // Long msg
-        let expected = AccountId::new(&hex!(
-            "83326e554723b15bac664ceabc8a5887e27003abe9fbd992af8c7bcea4745167"
-        ))
-        .unwrap();
+        let expected = AccountId::new(&hex!("83326e554723b15bac664ceabc8a5887e27003ab")).unwrap();
         assert_eq!(
             build_instantiate_2_address(&checksum1, &creator1, &salt1, msg3).unwrap(),
             expected
         );
 
         // Long salt
-        let expected = AccountId::new(&hex!(
-            "9384c6248c0bb171e306fd7da0993ec1e20eba006452a3a9e078883eb3594564"
-        ))
-        .unwrap();
+        let expected = AccountId::new(&hex!("9384c6248c0bb171e306fd7da0993ec1e20eba00")).unwrap();
         assert_eq!(
             build_instantiate_2_address(&checksum1, &creator1, &salt2, b"").unwrap(),
             expected

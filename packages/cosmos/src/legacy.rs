@@ -271,10 +271,12 @@ mod tests {
             age: 32,
             height: Some(187),
         };
+        // cargo run slay3r1ve6ku6mevd5xjcmtv4hqqqqqqqqqqqqqc5nacv slay3r1vfkxzcmtdphkcetndahqqqqqqqqqqqqqyet8zv
+        //
+        //
         let exec_msg = Msg::Wasm(WasmMsg::Execute {
-            sender: AccountId::parse_string("slay3r1ve6ku6mevd5xjcmtv4hqqqqqqqqqqqqqc5nacv")
-                .unwrap(),
-            contract_addr: AccountId::parse_string("slay3r1vfkxzcmtdphkcetndahqqqqqqqqqqqqqyet8zv")
+            sender: AccountId::parse_string("0x66756e6b79636869636b656E0000000000000000").unwrap(),
+            contract_addr: AccountId::parse_string("0x626C61636b686F6c65736f6E0000000000000000")
                 .unwrap(),
             msg: serde_json::to_vec(&orig_msg).unwrap().into(),
             funds: vec![],
@@ -282,7 +284,7 @@ mod tests {
 
         let amino_msg = AminoMsg::build(&exec_msg);
         let output = serde_json::to_string(&amino_msg).unwrap();
-        let expected = r#"{"type":"wasm/MsgExecuteContract","value":{"contract":"slay3r1vfkxzcmtdphkcetndahqqqqqqqqqqqqqyet8zv","funds":[],"msg":{"age":32,"height":187,"name":"John Smith"},"sender":"slay3r1ve6ku6mevd5xjcmtv4hqqqqqqqqqqqqqc5nacv"}}"#;
+        let expected = r#"{"type":"wasm/MsgExecuteContract","value":{"contract":"0x626C61636b686F6c65736f6E0000000000000000","funds":[],"msg":{"age":32,"height":187,"name":"John Smith"},"sender":"0x66756e6b79636869636b656E0000000000000000"}}"#;
         assert_eq!(output, expected);
     }
 
@@ -294,10 +296,9 @@ mod tests {
             height: Some(165),
         };
         let init_msg = Msg::Wasm(WasmMsg::Instantiate {
-            sender: AccountId::parse_string("slay3r1ve6ku6mevd5xjcmtv4hqqqqqqqqqqqqqc5nacv")
-                .unwrap(),
+            sender: AccountId::parse_string("0x66756e6b79636869636b656E0000000000000000").unwrap(),
             admin: Some(
-                AccountId::parse_string("slay3r1vfkxzcmtdphkcetndahqqqqqqqqqqqqqyet8zv").unwrap(),
+                AccountId::parse_string("0x626C61636b686F6c65736f6E0000000000000000").unwrap(),
             ),
             code_id: 12345,
             label: "sticky".into(),
@@ -307,7 +308,7 @@ mod tests {
 
         let amino_msg = AminoMsg::build(&init_msg);
         let output = serde_json::to_string(&amino_msg).unwrap();
-        let expected = r#"{"type":"wasm/MsgInstantiateContract","value":{"admin":"slay3r1vfkxzcmtdphkcetndahqqqqqqqqqqqqqyet8zv","code_id":"12345","funds":[{"amount":"1234","denom":"uslay"}],"label":"sticky","msg":{"age":18,"height":165,"name":"n00b"},"sender":"slay3r1ve6ku6mevd5xjcmtv4hqqqqqqqqqqqqqc5nacv"}}"#;
+        let expected = r#"{"type":"wasm/MsgInstantiateContract","value":{"admin":"0x626C61636b686F6c65736f6E0000000000000000","code_id":"12345","funds":[{"amount":"1234","denom":"uslay"}],"label":"sticky","msg":{"age":18,"height":165,"name":"n00b"},"sender":"0x66756e6b79636869636b656E0000000000000000"}}"#;
         assert_eq!(output, expected);
     }
 
@@ -320,8 +321,7 @@ mod tests {
             height: Some(165),
         };
         let init_msg = Msg::Wasm(WasmMsg::Instantiate {
-            sender: AccountId::parse_string("slay3r1ve6ku6mevd5xjcmtv4hqqqqqqqqqqqqqc5nacv")
-                .unwrap(),
+            sender: AccountId::parse_string("0x66756e6b79636869636b656E0000000000000000").unwrap(),
             admin: None,
             code_id: 12345,
             label: "sticky".into(),
@@ -331,7 +331,7 @@ mod tests {
 
         let amino_msg = AminoMsg::build(&init_msg);
         let output = serde_json::to_string(&amino_msg).unwrap();
-        let expected = r#"{"type":"wasm/MsgInstantiateContract","value":{"code_id":"12345","funds":[],"label":"sticky","msg":{"age":18,"height":165,"name":"n00b"},"sender":"slay3r1ve6ku6mevd5xjcmtv4hqqqqqqqqqqqqqc5nacv"}}"#;
+        let expected = r#"{"type":"wasm/MsgInstantiateContract","value":{"code_id":"12345","funds":[],"label":"sticky","msg":{"age":18,"height":165,"name":"n00b"},"sender":"0x66756e6b79636869636b656E0000000000000000"}}"#;
         assert_eq!(output, expected);
     }
 }
