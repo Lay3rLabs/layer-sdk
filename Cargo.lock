@@ -2534,6 +2534,49 @@ dependencies = [
 ]
 
 [[package]]
+name = "layerd"
+version = "0.5.0"
+dependencies = [
+ "bytes",
+ "clap",
+ "cosmrs",
+ "cosmwasm-std",
+ "figment",
+ "futures",
+ "hex",
+ "hex-literal",
+ "http 1.1.0",
+ "layer-abci",
+ "layer-app",
+ "layer-cosmos",
+ "layer-proto",
+ "layer-std",
+ "layer-storage",
+ "opentelemetry",
+ "opentelemetry-jaeger",
+ "parking_lot",
+ "pico-args",
+ "prost 0.13.3",
+ "serde",
+ "serde_json",
+ "sha2 0.10.8",
+ "tendermint 0.39.1",
+ "tendermint-proto 0.39.1",
+ "tendermint-rpc",
+ "thiserror",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tonic-reflection",
+ "tonic-web",
+ "tower 0.4.13",
+ "tower-http",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3934,49 +3977,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f92a496fb766b417c996b9c5e57daf2f7ad3b0bebe1ccfca4856390e3d3bb67"
 dependencies = [
  "autocfg",
-]
-
-[[package]]
-name = "slay3rd"
-version = "0.5.0"
-dependencies = [
- "bytes",
- "clap",
- "cosmrs",
- "cosmwasm-std",
- "figment",
- "futures",
- "hex",
- "hex-literal",
- "http 1.1.0",
- "layer-abci",
- "layer-app",
- "layer-cosmos",
- "layer-proto",
- "layer-std",
- "layer-storage",
- "opentelemetry",
- "opentelemetry-jaeger",
- "parking_lot",
- "pico-args",
- "prost 0.13.3",
- "serde",
- "serde_json",
- "sha2 0.10.8",
- "tendermint 0.39.1",
- "tendermint-proto 0.39.1",
- "tendermint-rpc",
- "thiserror",
- "tokio",
- "tokio-stream",
- "tonic",
- "tonic-reflection",
- "tonic-web",
- "tower 0.4.13",
- "tower-http",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
 ]
 
 [[package]]

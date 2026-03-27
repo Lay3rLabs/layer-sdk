@@ -12,7 +12,7 @@ fi
 
 TAG=${TAG:-}
 
-for img in gateway slay3rd; do
+for img in gateway layerd; do
   $SUDO docker push ghcr.io/lay3rlabs/${img}:latest
 
   if [ -n "$TAG" ]; then

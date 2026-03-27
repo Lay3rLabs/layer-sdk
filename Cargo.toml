@@ -1,6 +1,7 @@
 [workspace]
-members = ["app/*", "contracts/*", "packages/*"]
-exclude = ["tools/proto-compiler"]
+# members = ["app/*", "contracts/*", "packages/comet/*", "packages/core/*", "packages/cosmossdk/*", "packages/utils/*"]
+members = ["app/*", "contracts/*", "packages/comet/*", "packages/core/*", "packages/cosmossdk/*"]
+exclude = ["packages/cosmossdk/tools", "packages/cosmossdk/tools/*"]
 resolver = "2"
 
 [workspace.package]
@@ -45,13 +46,13 @@ http = "1"
 tower-http = { version = "0.5", features = ["cors"] }
 anyhow = { version = "1", default-features = false }
 
-layer-abci = { path = "./packages/abci" }
-layer-app = { path = "./packages/app" }
-layer-cosmos = { path = "./packages/cosmos" }
-layer-golem = { path = "./packages/golem" }
-layer-proto = { path = "./packages/proto" }
-layer-std = { path = "./packages/std" }
-layer-storage = { path = "./packages/storage" }
+layer-abci = { path = "./packages/comet/abci" }
+layer-app = { path = "./packages/layer" }
+layer-cosmos = { path = "./packages/cosmossdk/cosmos" }
+layer-golem = { path = "./packages/cosmossdk/golem" }
+layer-proto = { path = "./packages/cosmossdk/proto" }
+layer-std = { path = "./packages/core/std" }
+layer-storage = { path = "./packages/core/storage" }
 
 layer-root = { path = "./contracts/root" }
 tc-echo = { path = "./contracts/echo" }

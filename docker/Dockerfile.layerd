@@ -1,0 +1,56 @@
+# docker build . -f docker/Dockerfile.slay3rd -t ghcr.io/lay3rlabs/slay3rd:latest
+# docker run --rm -it ghcr.io/lay3rlabs//slay3rd:latest /bin/bash
+
+### BUILDING
+
+FROM rust:1.80-bookworm AS builder
+WORKDIR /myapp
+
+RUN apt update && apt install -y clang
+
+# This whole pile will pre-build and cache the dependencies, so we just recompile local code below
+COPY Cargo.lock Cargo.toml /myapp/
+COPY app/layerd/Cargo.toml /myapp/app/layerd/Cargo.toml
+COPY dummy.rs /myapp/app/layerd/src/main.rs
+COPY contracts/caller/Cargo.toml /myapp/contracts/caller/Cargo.toml
+COPY dummy.rs /myapp/contracts/caller/src/lib.rs
+COPY contracts/echo/Cargo.toml /myapp/contracts/echo/Cargo.toml
+COPY dummy.rs /myapp/contracts/echo/src/lib.rs
+COPY contracts/root/Cargo.toml /myapp/contracts/root/Cargo.toml
+COPY dummy.rs /myapp/contracts/root/src/lib.rs
+COPY packages/comet/abci/Cargo.toml /myapp/packages/comet/abci/Cargo.toml
+COPY dummy.rs /myapp/packages/comet/abci/src/lib.rs
+COPY packages/layer/Cargo.toml /myapp/packages/layer/Cargo.toml
+COPY dummy.rs /myapp/packages/layer/src/lib.rs
+COPY packages/cosmossdk/cosmos/Cargo.toml /myapp/packages/cosmossdk/cosmos/Cargo.toml
+COPY dummy.rs /myapp/packages/cosmossdk/cosmos/src/lib.rs
+COPY packages/cosmossdk/golem/Cargo.toml /myapp/packages/cosmossdk/golem/Cargo.toml
+COPY dummy.rs /myapp/packages/cosmossdk/golem/src/lib.rs
+COPY packages/cosmossdk/proto/Cargo.toml /myapp/packages/cosmossdk/proto/Cargo.toml
+COPY dummy.rs /myapp/packages/cosmossdk/proto/src/lib.rs
+COPY dummy.rs /myapp/packages/cosmossdk/proto/examples/sync_test.rs
+COPY packages/core/std/Cargo.toml /myapp/packages/core/std/Cargo.toml
+COPY dummy.rs /myapp/packages/core/std/src/lib.rs
+COPY packages/core/storage/Cargo.toml /myapp/packages/core/storage/Cargo.toml
+COPY dummy.rs /myapp/packages/core/storage/src/lib.rs
+RUN cargo build --release --bin layerd
+
+# clean up these fake local deps so we compile for real later
+RUN rm /myapp/*/*/src/*.rs
+RUN rm -rf target/release/.fingerprint/layer-*
+
+# This build step should just compile the local code and be faster
+COPY . .
+RUN cargo build --release --bin layerd
+
+### PRODUCTION
+
+# Now, pack up that binary in a nice small image
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get upgrade -y
+RUN apt install -y libcurl4 wget
+COPY --from=builder /myapp/target/release/layerd /usr/local/bin/layerd
+# COPY --from=builder /myapp/Cargo.toml /usr/local/bin/layerd
+EXPOSE 26658
+CMD ["layerd"]
+

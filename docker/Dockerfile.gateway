@@ -3,7 +3,7 @@
 
 FROM golang:1.22-bookworm AS build-env
 
-COPY ./gateway /src/gateway
+COPY ./packages/cosmossdk/tools/gateway /src/gateway
 ENV CGO_ENABLED=0
 RUN cd /src/gateway && go build -o /app
 
