@@ -316,6 +316,12 @@ pub struct LayerNode<T: PersistentStorage + Send + Sync + 'static, P: PublicKey>
     /// while the executed tip is below `height`, so seats that halted at
     /// different heights still share one consensus parent.
     restart_anchor: Option<(u64, [u8; 32])>,
+    /// rc17v2 wedge self-recovery: the data dir root so a certified-but-
+    /// unexecuted parent stuck across ~5min of probes can run the
+    /// documented archive-consensus + restart procedure in place
+    /// ({data_dir}/consensus is the journal — see consensus_storage_path).
+    /// None disables self-recovery (tests, embedded use).
+    data_dir: Option<std::path::PathBuf>,
     /// Phantom to bind the P type parameter without storing P directly.
     _phantom: std::marker::PhantomData<P>,
 }
@@ -342,6 +348,7 @@ impl<T: PersistentStorage + Send + Sync + 'static, P: PublicKey> Clone for Layer
             fault_inject: self.fault_inject.clone(),
             prune_keep_heights: self.prune_keep_heights,
             restart_anchor: self.restart_anchor,
+            data_dir: self.data_dir.clone(),
             _phantom: std::marker::PhantomData,
         }
     }
@@ -394,6 +401,7 @@ impl<T: PersistentStorage + Send + Sync + 'static, P: PublicKey> LayerNode<T, P>
             fault_inject: None,
             prune_keep_heights: None,
             restart_anchor: None,
+            data_dir: None,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -401,6 +409,12 @@ impl<T: PersistentStorage + Send + Sync + 'static, P: PublicKey> LayerNode<T, P>
     /// Set the coordinated set-change restart anchor (NodeConfig::restart_anchor).
     pub fn with_restart_anchor(mut self, height: u64, digest: [u8; 32]) -> Self {
         self.restart_anchor = Some((height, digest));
+        self
+    }
+
+    /// rc17v2: enable wedge self-recovery against the live data dir.
+    pub fn with_data_dir(mut self, dir: impl Into<std::path::PathBuf>) -> Self {
+        self.data_dir = Some(dir.into());
         self
     }
 
@@ -532,7 +546,104 @@ impl<T: PersistentStorage + Send + Sync + 'static, P: PublicKey> LayerNode<T, P>
                     "consensus parent certified but not executed — awaiting its finalization; never executing a merely-notarized ancestor"
                 );
             }
+            // rc17v2 wedge self-recovery: a certified parent still
+            // unexecuted at the ~5-minute signature (50 throttle windows
+            // at the 6s pace) is the dead-variant livelock that halted g1
+            // on 2026-11-01 (h3938615, parent 6faf9ba7). The documented
+            // fix — archive data/consensus and restart from the finalized
+            // tip — now runs in place: once per digest, then exit for the
+            // watchdog. Every seat on this build hits the same signature
+            // within minutes, so the cohort forgets the dead variant
+            // together instead of waiting for a coordinated human window.
+            if occurrences % 50 == 0 {
+                node.maybe_wedge_recover(parent);
+            }
         });
+    }
+
+    /// rc17v2: archive the consensus journal once per dead-variant digest
+    /// and exit(75) so guard.sh/systemd restarts the node from the
+    /// finalized tip — the manual 2026-11-01 procedure, automated.
+    ///
+    /// The {data_dir}/wedge-recovered-<digest16> marker prevents wipe-
+    /// loops: if a lagging peer re-teaches the same dead variant after
+    /// our own archive, repeating the wipe is a human decision, not a
+    /// loop. Archiving (never deleting) keeps the wedge state as
+    /// forensic evidence.
+    fn maybe_wedge_recover(&self, parent: [u8; 32]) {
+        let Some(dir) = &self.data_dir else { return };
+        // Only fire while the parent is genuinely still not our executed
+        // tip — a finalization that landed mid-probe is not a wedge.
+        let stuck = self
+            .last_digest
+            .try_lock()
+            .map(|d| *d != parent)
+            .unwrap_or(true);
+        if !stuck {
+            return;
+        }
+        let marker = dir.join(format!(
+            "wedge-recovered-{}",
+            &hex::encode(parent)[..16]
+        ));
+        if marker.exists() {
+            return;
+        }
+        // Rate cap: at most 2 wedge recoveries per hour, counted from
+        // marker mtimes so the cap survives restarts. A chain producing
+        // serial dead variants is a deeper bug — after the cap, stay up
+        // wedged and page humans rather than churning archive+restarts.
+        if self.wedge_recoveries_recent(dir) >= 2 {
+            tracing::error!(
+                parent = %hex::encode(parent),
+                "wedge self-recovery rate-capped (2/hour) — staying up \
+                 wedged; this needs operator attention, not another wipe"
+            );
+            return;
+        }
+        let ts = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let bak = dir.join(format!("consensus.wedge-bak-{ts}"));
+        tracing::error!(
+            parent = %hex::encode(parent),
+            backup = %bak.display(),
+            "LIVELOCK SELF-RECOVERY: certified parent never finalized — \
+             archiving consensus journal and restarting (dead variant \
+             must not re-execute); 2026-11-01 coordinated procedure, automated"
+        );
+        if let Err(e) = std::fs::rename(dir.join("consensus"), &bak) {
+            tracing::error!(error = %e, "wedge recovery: consensus archive failed — restarting anyway");
+        }
+        let _ = std::fs::write(&marker, format!("{}\n", hex::encode(parent)));
+        // exit(75) = EX_TEMPFAIL: honest non-zero for a crash-for-
+        // recovery; Restart=always and the guard.sh pgrep check both
+        // restart on any exit.
+        std::process::exit(75);
+    }
+
+    /// Count of `wedge-recovered-*` markers written in the last hour —
+    /// filesystem-derived so the rate cap survives restarts.
+    fn wedge_recoveries_recent(&self, dir: &std::path::Path) -> usize {
+        let cutoff = SystemTime::now()
+            .checked_sub(Duration::from_secs(3600))
+            .unwrap_or(UNIX_EPOCH);
+        std::fs::read_dir(dir)
+            .map(|rd| {
+                rd.filter_map(|e| e.ok())
+                    .filter(|e| {
+                        e.file_name()
+                            .to_string_lossy()
+                            .starts_with("wedge-recovered-")
+                            && e.metadata()
+                                .and_then(|m| m.modified())
+                                .map(|t| t >= cutoff)
+                                .unwrap_or(false)
+                    })
+                    .count()
+            })
+            .unwrap_or(0)
     }
 
     /// Record the digest of a payload that consensus finalized but this node

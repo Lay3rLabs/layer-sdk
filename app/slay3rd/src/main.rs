@@ -1170,6 +1170,7 @@ async fn run_node(
     }
     let layer_node = layer_node.with_fault_inject(config.fault_inject.clone());
     let layer_node = layer_node.with_pruning(config.prune_keep_heights());
+    let layer_node = layer_node.with_data_dir(&config.data_dir);
     let layer_node = match &config.restart_anchor {
         Some(anchor) => {
             let raw = match hex::decode(&anchor.digest) {
