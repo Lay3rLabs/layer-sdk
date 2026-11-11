@@ -8,6 +8,10 @@ use cw_storage_plus::{Key, KeyDeserialize, Prefixer, PrimaryKey};
 use thiserror::Error;
 
 pub const BECH32_PREFIX: &str = "juno";
+// Accepted on decode only; encoding always emits BECH32_PREFIX so stored
+// addresses remain byte-identical through the dual-prefix window.
+pub const BECH32_PREFIX_ALT: &str = "junoclaw";
+const VALID_PREFIXES: [&str; 2] = [BECH32_PREFIX, BECH32_PREFIX_ALT];
 
 /// Valid lengths of decoded addresses
 pub const VALID_ADDR_LENGTH: [usize; 2] = [20usize, 32usize];
@@ -136,9 +140,9 @@ impl AccountId {
         if variant != Variant::Bech32 {
             return Err(AccountIdError::InvalidVariant);
         }
-        // make sure the proper chain prefix
-        if hrp != BECH32_PREFIX {
-            return Err(AccountIdError::InvalidPrefix(hrp, BECH32_PREFIX));
+        // accept either chain prefix; both decode to the same canonical bytes
+        if !VALID_PREFIXES.contains(&hrp.as_str()) {
+            return Err(AccountIdError::InvalidPrefix(hrp, "juno|junoclaw"));
         }
         let addr = Vec::<u8>::from_base32(&data).unwrap();
         // we only support 20 and 32 bytes for the binary version, enforce this for sanity check
@@ -224,6 +228,27 @@ mod tests {
         // incorrect bedh32 input fails
         let bad_addr = id.to_string().replace("z", "k");
         let _ = AccountId::parse_string(&bad_addr).unwrap_err();
+    }
+
+    #[test]
+    fn test_dual_prefix() {
+        let id = AccountId::new(&[42u8; 20]).unwrap();
+        let juno = id.to_string();
+        assert!(juno.starts_with("juno1"));
+        // bech32 checksum covers the hrp, so a valid junoclaw address must be
+        // re-encoded — decode to canonical bytes then encode under the alt hrp
+        let (_, data, _) = bech32::decode(&juno).unwrap();
+        let mut alt = String::new();
+        bech32::encode_to_fmt(&mut alt, "junoclaw", &data, Variant::Bech32).unwrap();
+        assert!(alt.starts_with("junoclaw1"));
+        let reparsed = AccountId::parse_string(&alt).unwrap();
+        assert_eq!(id, reparsed);
+        // encoding still emits the canonical prefix
+        assert_eq!(reparsed.to_string(), juno);
+        // an unrelated prefix is still rejected
+        let mut bad = String::new();
+        bech32::encode_to_fmt(&mut bad, "cosmos", &data, Variant::Bech32).unwrap();
+        assert!(AccountId::parse_string(&bad).is_err());
     }
 
     #[test]
