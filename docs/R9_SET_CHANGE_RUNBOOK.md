@@ -159,3 +159,57 @@ docker run --rm -v <repo>:/src -v r9-target:/t -v r9-cargo:/root/.cargo \
   setup). Phase C interactive DKG removes this.
 - A joining seat with empty app state syncs via the resolver — expect a
   catch-up period before it contributes signatures.
+
+## Operational addendum — live-chain apply variant (R4, 2026-11-15)
+
+The R4 reshare ran as a **rolling apply on a live chain** (no coordinated
+halt — the old set was already degraded and seats applied one-by-one over
+~13h). It exposed two failure modes the devnet rehearsal never hit:
+
+### Failure 1 — the tip kept moving during apply
+
+With ≥quorum old-set seats still running, finality continued while the
+fleet applied. The anchor picked at window-open was ~1,000 blocks stale
+by the time the last seat restarted. Seats *above* `anchor.height`
+silently self-anchor on their **local executed tip** (the `h > anchor`
+fall-through in `genesis()`), while seats *below* it anchor on the
+coordinator digest — a stale-low anchor therefore **forks the set**.
+
+**Freeze variant (when a full halt isn't possible):**
+
+1. Message every *continuing* seat to **stop** (not restart) — the
+   finalized tip freezes. Apply seats may already be stopped; the
+   continuing set must not produce blocks during the window.
+2. Only then pick the anchor (below). Drift = 0 no matter how long the
+   human apply takes.
+3. After all new-set seats are anchored, restart the continuing set —
+   new-set quorum forms and finality resumes.
+
+### Failure 2 — anchor picked from cached telemetry
+
+`jc-status`/explorer showed tip=6950159 frozen for ~10h while the chain
+actually finalized to 6951156 — old-set quorum held at exactly 8 after
+canary restarts. The "stall" was a telemetry artifact.
+
+**Anchor verification (mandatory, ~2 min):**
+
+- Pull the tip from **≥2 independent seats' live gRPC**, not status
+  pages: `jc-explorer --grpc <peer>:9090 --listen 127.0.0.1:<port>`,
+  then `GET /api/blocks?limit=1` — require identical height AND digest.
+- Check freshness fields (`height_age_s`, `tip_age_s`) before trusting
+  any "stall" reading: fresh probes + frozen tip = real stall;
+  stale probes = broken telemetry, keep digging.
+- Cross-check each seat's **executed** tip (`executed tip payload
+  injected` at startup, or the archive `blocks` table) — the anchor is
+  the HIGHEST executed (height, digest) across *continuing* seats, and
+  every seat must be able to reach it (seats below catch up via
+  `ensure_executed`; that fetch path is the long pole — verify it works
+  before declaring quorum).
+
+### Checklist delta vs. the base procedure
+
+- [ ] Continuing set **stopped** (tip frozen) before anchor selection
+- [ ] Tip verified via live gRPC on ≥2 seats, digest parity confirmed
+- [ ] Each seat's executed-tip line collected; max (height, digest) = anchor
+- [ ] Lagging seats' catch-up path smoke-tested (one seat first)
+- [ ] `restart_anchor` removed fleet-wide after stable finality (step 8)
