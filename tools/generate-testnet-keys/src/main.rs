@@ -141,6 +141,8 @@ fn main() {
             "dkg-synthesize-genesis-output" => {
                 return cmd_dkg_synthesize_genesis_output(&args[2..])
             }
+            "seal" => return cmd_seal(&args[2..]),
+            "unseal" => return cmd_unseal(&args[2..]),
             _ => {}
         }
     }
@@ -1088,6 +1090,44 @@ fn resolve_priv_bytes(f: &DealingPrivFile, my_seed: &[u8]) -> Vec<u8> {
             .expect("dealing-priv file has neither priv_msg_hex nor enc"),
     )
     .expect("bad priv_msg_hex")
+}
+
+/// Seal an arbitrary file to a recipient's Ed25519 public key (jc-share
+/// phase 1). Emits the same x25519-xchacha20poly1305-v1 JSON envelope used
+/// for dealing-priv files, so any transport sees ciphertext only.
+fn cmd_seal(args: &[String]) {
+    if has_flag(args, "--help") || has_flag(args, "-h") {
+        println!("Usage: generate-testnet-keys seal --to <ed25519 public hex> --in <file> --out <file>");
+        return;
+    }
+    let to = get_arg(args, "--to").expect("--to <ed25519 public hex> required");
+    let input = get_arg(args, "--in").expect("--in <file> required");
+    let output = get_arg(args, "--out").expect("--out <file> required");
+    let plaintext = std::fs::read(input).unwrap_or_else(|e| panic!("read {input}: {e}"));
+    let enc = encrypt_for_recipient(to, &plaintext);
+    write_json(output, &enc);
+    println!(
+        "sealed {} bytes -> {output} (recipient {})",
+        plaintext.len(),
+        short(to)
+    );
+}
+
+/// Unseal a file addressed to our keys.json Ed25519 identity.
+fn cmd_unseal(args: &[String]) {
+    if has_flag(args, "--help") || has_flag(args, "-h") {
+        println!("Usage: generate-testnet-keys unseal [--keys <keys.json>] --in <file> --out <file>");
+        return;
+    }
+    let keys_path = get_arg(args, "--keys").unwrap_or("./keys.json");
+    let input = get_arg(args, "--in").expect("--in <file> required");
+    let output = get_arg(args, "--out").expect("--out <file> required");
+    let keys: ValidatorKeys = load_json(keys_path);
+    let enc: EncField = load_json(input);
+    let seed = hex::decode(&keys.ed25519_private_hex).expect("bad ed25519_private_hex");
+    let plaintext = decrypt_for_me(&enc, &seed);
+    std::fs::write(output, &plaintext).unwrap_or_else(|e| panic!("write {output}: {e}"));
+    println!("unsealed {} bytes -> {output}", plaintext.len());
 }
 
 fn load_json<T: for<'de> Deserialize<'de>>(path: &str) -> T {
